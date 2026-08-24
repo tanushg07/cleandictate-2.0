@@ -14,7 +14,7 @@ Intelligent Dictation Engine with real-time speech-to-text, filler removal, and 
 
 ```powershell
 # Clone the repository
-git clone https://github.com/SharadhNaidu/CleanDictate.git
+git clone https://github.com/tanushg07/cleandictate-2.0.git
 cd CleanDictate
 
 # Create virtual environment
