@@ -1,5 +1,7 @@
 # CleanDictate
 
+> **Note**: This project has been cloned from [https://github.com/SharadhNaidu/CleanDictate.git](https://github.com/SharadhNaidu/CleanDictate.git). All rights to the original codebase belong to him.
+
 Intelligent Dictation Engine with real-time speech-to-text, filler removal, and dual tone transformation (Professional & Casual).
 
 ## Requirements
