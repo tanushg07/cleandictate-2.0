@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+python-multipart
+pydantic
+torch
+faster-whisper
+numpy
+librosa
+transformers
+spacy
+scipy
+pyaudio
+pynput
+accelerate
