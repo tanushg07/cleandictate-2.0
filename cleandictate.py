@@ -4,7 +4,6 @@ import os
 os.environ['TORCH_LOAD_SAFE_TENSORS_ONLY'] = '0'
 
 import numpy as np
-import pyaudio
 import torch
 import threading
 import queue
@@ -13,13 +12,18 @@ import re
 import spacy
 import difflib
 import sys
-import tkinter as tk
-from tkinter import ttk, scrolledtext
 from faster_whisper import WhisperModel
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-from pynput import keyboard
-from pynput.keyboard import Controller as KeyboardController, Key
 from scipy import signal  
+
+try:
+    import pyaudio
+    import tkinter as tk
+    from tkinter import ttk, scrolledtext
+    from pynput import keyboard
+    from pynput.keyboard import Controller as KeyboardController, Key
+except ImportError:
+    pass
 
 class ConsoleRedirector:
     """
@@ -448,9 +452,13 @@ Best regards,
     BULLET_TEMPLATE = "• {point}"
     
     def __init__(self):
-        """Initialize both models on GPU with float16 precision"""
+        """Initialize both models on GPU with float16 precision (fallback to CPU)"""
         print("[Style] Initializing Dual-Model Cascade Architecture...")
         
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.dtype = torch.float16 if self.device == "cuda" else torch.float32
+        self.device_map = "auto" if self.device == "cuda" else None
+
         # Model A: Grammar Correction
         print("[Style] Loading Model A: vennify/t5-base-grammar-correction...")
         self.grammar_model_name = "vennify/t5-base-grammar-correction"
@@ -458,12 +466,14 @@ Best regards,
         
         self.grammar_model = AutoModelForSeq2SeqLM.from_pretrained(
             self.grammar_model_name,
-            torch_dtype=torch.float16,
-            device_map="auto",
+            torch_dtype=self.dtype,
+            device_map=self.device_map,
             use_safetensors=True,  # Force safetensors to bypass torch.load security
         )
+        if self.device == "cpu":
+            self.grammar_model = self.grammar_model.to("cpu")
         self.grammar_model.eval()
-        print("[Style] Model A loaded (GPU float16)")
+        print(f"[Style] Model A loaded ({self.device} {self.dtype})")
         
         # Model B: Style Transfer
         print("[Style] Loading Model B: google/flan-t5-large...")
@@ -472,12 +482,14 @@ Best regards,
         
         self.style_model = AutoModelForSeq2SeqLM.from_pretrained(
             self.style_model_name,
-            torch_dtype=torch.float16,
-            device_map="auto",
+            torch_dtype=self.dtype,
+            device_map=self.device_map,
             use_safetensors=True,  # Force safetensors to bypass torch.load security
         )
+        if self.device == "cpu":
+            self.style_model = self.style_model.to("cpu")
         self.style_model.eval()
-        print("[Style] Model B loaded (GPU float16)")
+        print(f"[Style] Model B loaded ({self.device} {self.dtype})")
         
         self._warmup()
         print("[Style] Dual-Model Cascade Ready!")
@@ -488,13 +500,13 @@ Best regards,
         
         # Warm up Model A
         dummy_grammar = self.GRAMMAR_PREFIX + "hello world"
-        inputs_a = self.grammar_tokenizer(dummy_grammar, return_tensors="pt").to("cuda")
+        inputs_a = self.grammar_tokenizer(dummy_grammar, return_tensors="pt").to(self.device)
         with torch.no_grad():
             _ = self.grammar_model.generate(**inputs_a, max_length=32, num_beams=1)
         
         # Warm up Model B with new prompt format
         dummy_style = self.STYLE_PROMPTS['formal'].format(text="hello world")
-        inputs_b = self.style_tokenizer(dummy_style, return_tensors="pt").to("cuda")
+        inputs_b = self.style_tokenizer(dummy_style, return_tensors="pt").to(self.device)
         with torch.no_grad():
             _ = self.style_model.generate(**inputs_b, max_length=32, num_beams=1)
         
@@ -503,7 +515,7 @@ Best regards,
     def _correct_grammar(self, text: str) -> str:
         """Stage 1: Pure grammar correction"""
         input_text = self.GRAMMAR_PREFIX + text
-        inputs = self.grammar_tokenizer(input_text, return_tensors="pt", max_length=256, truncation=True).to("cuda")
+        inputs = self.grammar_tokenizer(input_text, return_tensors="pt", max_length=256, truncation=True).to(self.device)
         
         with torch.no_grad():
             outputs = self.grammar_model.generate(**inputs, max_length=256, num_beams=1)
@@ -1374,7 +1386,7 @@ class SpeechEngine:
     SAMPLE_RATE = 16000
     CHUNK_SIZE = 512
     CHANNELS = 1
-    FORMAT = pyaudio.paInt16
+    FORMAT = 8 # pyaudio.paInt16
     SILENCE_THRESHOLD_CHUNKS = 15
     SPEECH_PAD_CHUNKS = 5
     
