@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CleanDictate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F6FA;
+    --bg-glow:none;
+    --surface:#FFFFFF;
+    --surface-raised:#F2F1F8;
+    --surface-hover:#EAE8F7;
+    --border:rgba(20,18,40,0.08);
+    --border-soft:rgba(20,18,40,0.05);
+    --violet:#6D4FEE;
+    --violet-soft:rgba(109,79,238,0.12);
+    --cyan:#0DBFB8;
+    --amber:#E08E00;
+    --amber-soft:rgba(224,142,0,0.12);
+    --text:#18172A;
+    --text-dim:#6B697E;
+    --text-faint:#9694A8;
+    --danger:#E5484D;
+    --danger-soft:rgba(229,72,77,0.10);
+    --radius-sm:8px;
+    --radius:12px;
+    --radius-lg:18px;
+    --shadow-card:0 1px 2px rgba(24,20,50,0.04), 0 16px 32px -20px rgba(24,20,50,0.14);
+    --sidebar-w:250px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg); background-image:var(--bg-glow);
+    color:var(--text);
+    font-family:'Inter', ui-sans-serif, system-ui, sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app-layout{display:flex; min-height:100vh;}
+  .shell{max-width:900px; width:100%; margin:0 auto; padding:0 28px 80px;}
+  h1,h2,h3,.display{font-family:'Plus Jakarta Sans', sans-serif;}
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:var(--sidebar-w); flex-shrink:0; background:var(--surface);
+    border-right:1px solid var(--border); min-height:100vh;
+    display:flex; flex-direction:column; padding:26px 20px;
+    position:sticky; top:0;
+  }
+  .logo{display:flex; align-items:center; gap:10px; padding:4px 10px 0;}
+  .logo-mark{
+    width:22px; height:22px; display:flex; align-items:center; justify-content:center; color:var(--violet); flex-shrink:0;
+  }
+  .logo-mark svg{width:100%; height:100%;}
+  .logo-text{font-weight:700; font-size:17px; letter-spacing:-0.2px; color:var(--violet); font-family:'Plus Jakarta Sans', sans-serif;}
+
+  .side-nav{display:flex; flex-direction:column; gap:3px; margin-top:34px;}
+  .side-nav-item{
+    display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:var(--radius-sm);
+    color:var(--text-dim); font-size:14px; font-weight:500; cursor:default; user-select:none;
+  }
+  .side-nav-item svg{width:17px; height:17px; flex-shrink:0;}
+  .side-nav-item.active{background:var(--violet); color:#fff; box-shadow:0 4px 14px rgba(109,79,238,0.3);}
+
+  .sidebar-bottom{margin-top:auto; padding-top:18px; border-top:1px solid var(--border-soft);}
+  .profile-row{display:flex; align-items:center; gap:10px; padding:8px 10px;}
+  .profile-avatar{width:30px; height:30px; border-radius:50%; background:#18172A; color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0;}
+  .profile-name{font-size:13.5px; color:var(--text-dim); font-weight:500;}
+
+  /* ---------- Nav (top bar within main content) ---------- */
+  nav{
+    display:flex; align-items:center; justify-content:flex-end;
+    padding:22px 0; margin-bottom:8px;
+  }
+  .nav-right{display:flex; align-items:center; gap:14px;}
+
+  .status-chip{
+    display:flex; align-items:center; gap:7px;
+    font-size:12.5px; font-weight:500; color:var(--text-dim);
+    padding:6px 12px 6px 10px; border-radius:20px; background:var(--surface); border:1px solid var(--border);
+  }
+  .status-chip .dot{width:6px; height:6px; border-radius:50%; background:var(--text-faint); transition:all .25s;}
+  .status-chip.ready .dot{background:#3FD87A; box-shadow:0 0 6px #3FD87A;}
+  .status-chip.recording{color:var(--amber);}
+  .status-chip.recording .dot{background:var(--amber); box-shadow:0 0 8px var(--amber); animation:blip 1.1s ease-in-out infinite;}
+  .status-chip.error .dot{background:var(--danger); box-shadow:0 0 6px var(--danger);}
+  @keyframes blip{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+  .adv-toggle{
+    display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none;
+    font-size:12.5px; color:var(--text-dim); padding:6px 4px;
+  }
+  .adv-toggle:hover{color:var(--text);}
+  .switch{width:30px; height:17px; border-radius:20px; background:var(--surface-raised); border:1px solid var(--border); position:relative; transition:all .2s;}
+  .switch::after{content:''; position:absolute; width:12px; height:12px; border-radius:50%; background:var(--text-faint); top:2px; left:2px; transition:all .2s;}
+  .switch.on{background:var(--violet-soft); border-color:var(--violet);}
+  .switch.on::after{background:var(--violet); transform:translateX(13px);}
+
+  /* ---------- Hero / recorder ---------- */
+  .hero-heading{text-align:center; padding-top:26px; margin-bottom:22px;}
+  .hero-heading h1{font-size:32px; font-weight:800; letter-spacing:-0.5px; margin-bottom:10px;}
+  .hero-heading p{font-size:15px; color:var(--text-dim);}
+
+  .hero{
+    background:var(--surface);
+    border:1px solid var(--border); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);
+    padding:44px 32px 32px; text-align:center; margin-bottom:20px;
+    position:relative; overflow:hidden;
+  }
+  .rec-ring{
+    width:112px; height:112px; border-radius:50%; margin:0 auto 20px;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--violet); border:1px solid var(--violet);
+    box-shadow:0 10px 26px -6px rgba(109,79,238,0.45);
+    position:relative; cursor:pointer; transition:all .25s;
+  }
+  .rec-ring::before{
+    content:''; position:absolute; inset:-1px; border-radius:50%;
+    background:conic-gradient(from 0deg, var(--violet), var(--cyan), var(--violet));
+    opacity:0; transition:opacity .3s; z-index:-1; filter:blur(10px);
+  }
+  .rec-ring:hover:not(.disabled)::before{opacity:.55;}
+  .rec-ring.recording{border-color:var(--amber); background:var(--amber); box-shadow:0 10px 26px -6px rgba(224,142,0,0.45);}
+  .rec-ring.recording::before{opacity:.7; background:conic-gradient(from 0deg, var(--amber), #FFD27A, var(--amber)); animation:spin 3s linear infinite;}
+  .rec-ring.disabled{cursor:not-allowed; background:var(--surface-raised); border-color:var(--border); box-shadow:none;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .rec-icon{width:34px; height:34px; position:relative; z-index:1;}
+  .rec-icon svg{width:100%; height:100%; color:#fff; transition:color .25s;}
+  .rec-ring.disabled .rec-icon svg{color:var(--text-faint);}
+
+  .rec-label{font-size:15px; font-weight:600; margin-bottom:4px;}
+  .rec-sub{font-size:13px; color:var(--text-dim); margin-bottom:22px;}
+
+  .pill-row{display:flex; gap:8px; justify-content:center; flex-wrap:wrap;}
+  .pill-summary{
+    font-size:12px; color:var(--text-dim); background:var(--surface-raised);
+    border:1px solid var(--border-soft); padding:5px 12px; border-radius:20px;
+  }
+  .pill-summary b{color:var(--text); font-weight:600;}
+
+  /* ---------- Segmented control ---------- */
+  .settings-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card); padding:24px 26px; margin-bottom:20px;
+  }
+  .settings-grid{display:grid; grid-template-columns:1fr 1fr; gap:20px 28px;}
+  @media (max-width:640px){.settings-grid{grid-template-columns:1fr;}}
+  .setting-label{
+    font-size:11.5px; font-weight:600; letter-spacing:0.3px; color:var(--text-dim);
+    text-transform:uppercase; margin-bottom:9px; display:block;
+  }
+  .segmented{display:flex; background:var(--surface-raised); border:1px solid var(--border); border-radius:var(--radius-sm); padding:3px; gap:2px; flex-wrap:wrap;}
+  .segmented button{
+    flex:1; min-width:fit-content; background:none; border:none; color:var(--text-dim);
+    font-family:'Inter', sans-serif; font-size:13px; font-weight:500; padding:8px 12px;
+    border-radius:6px; cursor:pointer; transition:all .15s; white-space:nowrap;
+  }
+  .segmented button:hover:not(.active){color:var(--text); background:rgba(255,255,255,0.03);}
+  .segmented button.active{background:var(--violet); color:#fff; box-shadow:0 2px 8px rgba(124,108,255,0.35);}
+  .segmented button:disabled{opacity:.4; cursor:not-allowed;}
+  select.native{
+    width:100%; background:var(--surface-raised); border:1px solid var(--border); color:var(--text);
+    font-family:'Inter', sans-serif; font-size:13px; padding:9px 12px; border-radius:var(--radius-sm);
+    cursor:pointer; appearance:none;
+    background-image:linear-gradient(45deg, transparent 50%, var(--text-faint) 50%), linear-gradient(135deg, var(--text-faint) 50%, transparent 50%);
+    background-position:calc(100% - 16px) center, calc(100% - 11px) center;
+    background-size:5px 5px, 5px 5px; background-repeat:no-repeat;
+  }
+  select.native:disabled{opacity:.4; cursor:not-allowed;}
+  select.native:focus, button:focus-visible{outline:2px solid var(--violet); outline-offset:2px;}
+
+  /* ---------- Output card ---------- */
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); padding:24px 26px; margin-bottom:20px;}
+  .card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
+  .card-title{font-size:14.5px; font-weight:700;}
+  .card-title-sub{font-size:12px; color:var(--text-faint); font-weight:400; margin-top:2px;}
+
+  .output-body{
+    font-size:16px; line-height:1.7; color:var(--text); min-height:90px; white-space:pre-wrap;
+  }
+  .corrected-word{
+    color:var(--text); background:var(--violet-soft); border:1px solid rgba(124,108,255,0.45);
+    border-radius:4px; padding:1px 3px; cursor:help;
+  }
+  .correction-note{font-size:11.5px;color:var(--text-faint);margin-top:10px;}
+  .correction-note b{color:var(--violet);font-weight:600;}
+  .output-empty{color:var(--text-faint); font-size:13.5px;}
+  .output-meta{display:none; gap:10px; margin-top:16px; flex-wrap:wrap;}
+  .output-meta.show{display:flex;}
+  .meta-chip{
+    font-size:11px; color:var(--text-dim); background:var(--surface-raised); border:1px solid var(--border-soft);
+    padding:4px 10px; border-radius:20px;
+  }
+  .meta-chip b{color:var(--cyan); font-weight:600;}
+  .icon-btn{
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--surface-raised); border:1px solid var(--border); color:var(--text-dim);
+    font-family:'Inter', sans-serif; font-size:12.5px; font-weight:500;
+    padding:8px 14px; border-radius:var(--radius-sm); cursor:pointer; transition:all .15s; margin-top:16px;
+  }
+  .icon-btn:hover{color:var(--text); border-color:var(--violet); background:var(--violet-soft);}
+
+  .history-row{display:flex; gap:8px; overflow-x:auto; margin-top:18px; padding-top:16px; border-top:1px solid var(--border-soft);}
+  .history-row:empty{display:none; border:none; padding:0; margin:0;}
+  .history-chip{
+    flex-shrink:0; max-width:220px; font-size:12px; color:var(--text-dim);
+    background:var(--surface-raised); border:1px solid var(--border-soft); padding:8px 12px; border-radius:var(--radius-sm);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; font-family:'Inter', sans-serif;
+    transition:all .15s; text-align:left;
+  }
+  .history-chip:hover{color:var(--text); border-color:var(--violet); background:var(--violet-soft);}
+  .history-chip.active{color:var(--text); border-color:var(--violet); background:var(--violet-soft);}
+  .history-chip .time{color:var(--text-faint); margin-right:6px; font-size:10.5px;}
+
+
+  /* ---------- Custom dictionary ---------- */
+  .dictionary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:24px 26px;margin-bottom:20px;}
+  .dictionary-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;} @media(max-width:640px){.dictionary-grid{grid-template-columns:1fr;}}
+  .dictionary-help{font-size:12px;color:var(--text-faint);line-height:1.5;margin-bottom:12px;}
+  .dict-input-row{display:flex;gap:8px;}.dict-input{flex:1;min-width:0;background:var(--surface-raised);border:1px solid var(--border);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:9px 11px;border-radius:var(--radius-sm);}.dict-input:focus{outline:2px solid var(--violet);outline-offset:1px;}.dict-add{padding:9px 13px;margin:0;}
+  .dict-list{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;min-height:28px;}.dict-tag{display:inline-flex;align-items:center;gap:7px;font-size:12px;background:var(--surface-raised);border:1px solid var(--border-soft);color:var(--text-dim);padding:6px 8px 6px 10px;border-radius:20px;}.dict-remove{border:none;background:none;color:var(--text-faint);cursor:pointer;font-size:15px;line-height:1;padding:0;}.dict-remove:hover{color:var(--danger);}.correction-list{margin-top:12px;display:flex;flex-direction:column;gap:7px;}.correction-item{display:grid;grid-template-columns:1fr auto 1fr auto;gap:8px;align-items:center;font-size:12px;background:var(--surface-raised);border:1px solid var(--border-soft);padding:8px 10px;border-radius:var(--radius-sm);}.correction-arrow{color:var(--violet);font-weight:700;}.dict-empty{font-size:12px;color:var(--text-faint);padding:5px 0;}
+
+  /* ---------- Rewrite ---------- */
+  textarea{
+    width:100%; background:var(--surface-raised); border:1px solid var(--border); color:var(--text);
+    font-family:'Inter', sans-serif; font-size:14.5px; line-height:1.6;
+    padding:13px 15px; border-radius:var(--radius-sm); resize:vertical; min-height:96px;
+  }
+  textarea:focus{outline:2px solid var(--violet); outline-offset:1px;}
+  textarea::placeholder{color:var(--text-faint);}
+  .rewrite-controls{display:grid; grid-template-columns:1fr 1fr auto; gap:14px; align-items:end; margin-top:16px;}
+  @media (max-width:640px){.rewrite-controls{grid-template-columns:1fr;}}
+  .btn-primary{
+    background:linear-gradient(135deg, var(--violet), #6355E0); border:none; color:#fff;
+    font-family:'Inter', sans-serif; font-size:13.5px; font-weight:600;
+    padding:11px 22px; border-radius:var(--radius-sm); cursor:pointer; transition:all .15s;
+    box-shadow:0 4px 14px rgba(124,108,255,0.3); white-space:nowrap;
+  }
+  .btn-primary:hover:not(:disabled){box-shadow:0 6px 20px rgba(124,108,255,0.45); transform:translateY(-1px);}
+  .btn-primary:disabled{opacity:.4; cursor:not-allowed; transform:none; box-shadow:none;}
+  #rewriteResults{margin-top:18px;}
+  .rewrite-result{background:var(--surface-raised); border:1px solid var(--border-soft); border-radius:var(--radius); padding:16px 18px; margin-top:12px;}
+  .rr-label{font-size:11px; font-weight:600; letter-spacing:0.3px; text-transform:uppercase; color:var(--violet); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;}
+  .rr-copy{background:none; border:none; color:var(--text-faint); font-family:'Inter',sans-serif; font-size:11px; font-weight:500; cursor:pointer;}
+  .rr-copy:hover{color:var(--text);}
+  .rr-text{font-size:14.5px; line-height:1.65; color:var(--text); white-space:pre-wrap;}
+  .rewrite-dual{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  @media (max-width:640px){.rewrite-dual{grid-template-columns:1fr;}}
+
+  /* ---------- Advanced panel ---------- */
+  .advanced{display:none;}
+  .advanced.show{display:block;}
+  .chain{display:flex; align-items:center; gap:0; overflow-x:auto; padding-bottom:6px;}
+  .node{display:flex; flex-direction:column; align-items:center; gap:7px; min-width:72px; flex-shrink:0;}
+  .node .ring{width:11px; height:11px; border-radius:50%; border:2px solid var(--text-faint); background:transparent; transition:all .35s;}
+  .node.active .ring{border-color:var(--amber); background:var(--amber); box-shadow:0 0 10px var(--amber);}
+  .node label{font-size:9.5px; letter-spacing:1px; color:var(--text-faint); text-transform:uppercase; transition:color .35s; font-family:'JetBrains Mono', monospace;}
+  .node.active label{color:var(--amber);}
+  .connector{flex:1; height:1px; background:var(--border); min-width:16px; margin:0 -2px 20px; position:relative; top:-14px;}
+  .connector.active{background:linear-gradient(90deg, var(--amber), #FFD27A);}
+  .meter{display:flex; align-items:flex-end; gap:3px; height:22px; margin-top:10px;}
+  .meter span{width:4px; background:var(--text-faint); border-radius:1px; height:20%; transition:background .3s;}
+  .meter.live span{background:var(--amber); animation:bar 900ms ease-in-out infinite;}
+  .meter.live span:nth-child(1){animation-delay:0ms;} .meter.live span:nth-child(2){animation-delay:90ms;}
+  .meter.live span:nth-child(3){animation-delay:180ms;} .meter.live span:nth-child(4){animation-delay:270ms;}
+  .meter.live span:nth-child(5){animation-delay:360ms;} .meter.live span:nth-child(6){animation-delay:450ms;}
+  .meter.live span:nth-child(7){animation-delay:540ms;} .meter.live span:nth-child(8){animation-delay:630ms;}
+  .meter.live span:nth-child(9){animation-delay:720ms;} .meter.live span:nth-child(10){animation-delay:810ms;}
+  @keyframes bar{0%,100%{height:20%;}50%{height:90%;}}
+
+  .console{
+    background:#07070B; border:1px solid var(--border); border-radius:var(--radius-sm);
+    padding:14px 16px; height:200px; overflow-y:auto; margin-top:18px;
+    font-family:'JetBrains Mono', monospace; font-size:11.5px; line-height:1.6;
+  }
+  .console::-webkit-scrollbar{width:8px;}
+  .console::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12); border-radius:4px;}
+  .console div{color:#B4B2C4; white-space:pre-wrap; word-break:break-word;}
+  .tag-asr{color:var(--cyan);}
+  .tag-style{color:var(--amber);}
+  .tag-err{color:var(--danger);}
+
+  .hotkey-hint{font-size:11.5px; color:var(--text-faint); margin-top:16px; text-align:center;}
+  .hotkey-hint kbd{background:var(--surface-raised); border:1px solid var(--border); border-radius:4px; padding:2px 6px; color:var(--text-dim); font-family:'JetBrains Mono',monospace; font-size:10.5px;}
+
+  /* ---------- Page switching ---------- */
+  .page{display:none;}
+  .page.active{display:block;}
+
+  /* ---------- Pricing ---------- */
+  .pricing-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(228px, 1fr)); gap:16px; margin-bottom:28px;}
+  .plan-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card); padding:24px 20px; display:flex; flex-direction:column;
+    position:relative; transition:transform .15s, box-shadow .15s;
+  }
+  .plan-card.highlight{border-color:var(--violet); box-shadow:0 1px 2px rgba(24,20,50,0.04), 0 20px 40px -18px rgba(109,79,238,0.35);}
+  .plan-ribbon{
+    position:absolute; top:-10px; left:20px; background:var(--violet); color:#fff;
+    font-size:10.5px; font-weight:700; letter-spacing:0.3px; padding:4px 10px; border-radius:20px;
+    box-shadow:0 4px 10px rgba(109,79,238,0.35);
+  }
+  .plan-badge{
+    display:inline-flex; align-self:flex-start; font-size:11px; font-weight:600;
+    padding:4px 10px; border-radius:20px; margin-bottom:16px; letter-spacing:0.2px;
+  }
+  .plan-badge.free{background:var(--violet-soft); color:var(--violet);}
+  .plan-badge.pro{background:rgba(13,191,184,0.12); color:var(--cyan);}
+  .plan-badge.ent{background:var(--amber-soft); color:var(--amber);}
+  .plan-badge.team{background:rgba(20,18,40,0.06); color:var(--text-dim);}
+  .plan-badge.teamai{background:var(--violet-soft); color:var(--violet);}
+  .plan-name{font-size:18px; font-weight:800; letter-spacing:-0.2px; margin-bottom:5px; font-family:'Plus Jakarta Sans', sans-serif;}
+  .plan-audience{font-size:12px; color:var(--text-dim); line-height:1.45; margin-bottom:16px; min-height:34px;}
+  .plan-price{font-size:22px; font-weight:800; margin-bottom:2px;}
+  .plan-price-note{font-size:11.5px; color:var(--text-faint); margin-bottom:18px;}
+  .plan-features{list-style:none; display:flex; flex-direction:column; gap:9px; margin-bottom:22px; flex:1;}
+  .plan-features li{font-size:12.5px; color:var(--text-dim); display:flex; gap:8px; align-items:flex-start; line-height:1.45;}
+  .plan-features li::before{content:'✓'; color:var(--violet); font-weight:700; flex-shrink:0;}
+  .plan-cta{
+    text-align:center; text-decoration:none; display:block; width:100%;
+    font-family:'Inter', sans-serif; font-size:13px; font-weight:600;
+    padding:11px 16px; border-radius:var(--radius-sm); cursor:pointer; transition:all .15s;
+  }
+  .plan-cta.solid{background:linear-gradient(135deg, var(--violet), #6355E0); border:none; color:#fff; box-shadow:0 4px 14px rgba(124,108,255,0.3);}
+  .plan-cta.solid:hover{box-shadow:0 6px 20px rgba(124,108,255,0.45); transform:translateY(-1px);}
+  .plan-cta.outline{background:var(--surface-raised); border:1px solid var(--border); color:var(--text);}
+  .plan-cta.outline:hover{border-color:var(--violet); background:var(--violet-soft); color:var(--violet);}
+  .pricing-note{font-size:12px; color:var(--text-faint); text-align:center; margin-top:-10px; margin-bottom:10px;}
+</style>
+</head>
+<body>
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+      </div>
+      <div class="logo-text">CleanDictate</div>
+    </div>
+
+    <div class="side-nav">
+      <div class="side-nav-item active" data-page="dictate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+        <span>Dictate</span>
+      </div>
+      <div class="side-nav-item" data-page="history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 16 14"></polyline></svg>
+        <span>History</span>
+      </div>
+      <div class="side-nav-item" data-page="pricing">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        <span>Pricing</span>
+      </div>
+      <div class="side-nav-item" data-page="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>Settings</span>
+      </div>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="profile-row">
+        <div class="profile-avatar">N</div>
+        <div class="profile-name">Profile</div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="shell">
+
+  <nav>
+    <div class="nav-right">
+      <div class="adv-toggle" id="advToggle">
+        <span>Advanced</span>
+        <div class="switch" id="advSwitch"></div>
+      </div>
+      <div class="status-chip" id="statusPill"><div class="dot"></div><span id="statusText">Connecting</span></div>
+    </div>
+  </nav>
+
+  <div class="page active" id="page-dictate">
+
+  <div class="hero-heading">
+    <h1>Speak naturally. Write clearly.</h1>
+    <p>Turn natural speech into polished writing.</p>
+  </div>
+
+  <div class="hero">
+    <div class="rec-ring disabled" id="recRing">
+      <div class="rec-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+      </div>
+    </div>
+    <div class="rec-label" id="recLabel">Loading models…</div>
+    <div class="rec-sub" id="recSub">This takes 30–90 seconds on first launch</div>
+    <div class="pill-row">
+      <div class="pill-summary">Mode <b id="sumMode">Live</b></div>
+      <div class="pill-summary">Tone <b id="sumTone">Neutral</b></div>
+      <div class="pill-summary">Format <b id="sumFormat">Plain</b></div>
+    </div>
+    <div class="hotkey-hint"><kbd>F9</kbd> start &nbsp;·&nbsp; <kbd>F10</kbd> stop &nbsp;·&nbsp; works globally, even outside the browser</div>
+  </div>
+
+  <div class="settings-card">
+    <div class="settings-grid">
+      <div>
+        <label class="setting-label">Mode</label>
+        <div class="segmented" id="modeSeg">
+          <button data-val="live" class="active" disabled>Live</button>
+          <button data-val="document" disabled>Document</button>
+        </div>
+      </div>
+      <div>
+        <label class="setting-label">Microphone</label>
+        <select class="native" id="micSelect" disabled></select>
+      </div>
+      <div>
+        <label class="setting-label">Tone</label>
+        <div class="segmented" id="toneSeg">
+          <button data-val="neutral" class="active" disabled>Neutral</button>
+          <button data-val="formal" disabled>Formal</button>
+          <button data-val="casual" disabled>Casual</button>
+          <button data-val="concise" disabled>Concise</button>
+          <button data-val="dual" disabled>Dual</button>
+        </div>
+      </div>
+      <div>
+        <label class="setting-label">Format</label>
+        <div class="segmented" id="formatSeg">
+          <button data-val="plain" class="active" disabled>Plain</button>
+          <button data-val="email" disabled>Email</button>
+          <button data-val="bullets" disabled>Bullets</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Output</div>
+        <div class="card-title-sub">Your most recent dictation, cleaned and styled</div>
+      </div>
+    </div>
+    <div class="output-body" id="outputBody"><span class="output-empty">Nothing dictated yet — press the mic above or hit F9 to begin.</span></div>
+    <div class="output-meta" id="outputMeta"></div>
+    <button class="icon-btn" id="copyBtn" style="display:none;">Copy text</button>
+    <div class="history-row" id="history"></div>
+  </div>
+
+
+  <div class="dictionary-card">
+    <div class="card-head">
+      <div><div class="card-title">Custom Dictionary</div>
+      <div class="card-title-sub">Teach CleanDictate your names, acronyms, jargon, and common corrections
+
+      </div></div></div>
+      <div class="dictionary-grid">
+        <div><label class="setting-label">Vocabulary</label>
+          <div class="dictionary-help">Add words to help CleanDictate recognize names, acronyms, and technical terms more accurately.</div>
+          <div class="dict-input-row"><input class="dict-input" id="vocabInput" placeholder="e.g. CleanDictate, PostgreSQL, RegTech">
+            <button class="icon-btn dict-add" id="addVocabBtn" type="button">+ Add</button></div>
+            <div class="dict-list" id="vocabList"><div class="dict-empty">No custom words yet.</div></div></div><div><label class="setting-label">Correction Rules</label><div class="dictionary-help">Fix a phrase that is commonly heard incorrectly.</div><div class="dict-input-row"><input class="dict-input" id="heardInput" placeholder="Heard as"><input class="dict-input" id="replaceInput" placeholder="Replace with"><button class="icon-btn dict-add" id="addCorrectionBtn" type="button">+ Add</button></div><div class="correction-list" id="correctionList"><div class="dict-empty">No correction rules yet.</div></div></div></div></div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Rewrite text</div>
+        <div class="card-title-sub">Paste anything and convert its tone on demand</div>
+      </div>
+    </div>
+    <textarea id="rewriteInput" placeholder="Paste or type text here…"></textarea>
+    <div class="rewrite-controls">
+      <div>
+        <label class="setting-label">Tone</label>
+        <select class="native" id="rewriteTone">
+          <option value="formal">Formal</option>
+          <option value="casual">Casual</option>
+          <option value="concise">Concise</option>
+          <option value="dual">Dual (formal + casual)</option>
+        </select>
+      </div>
+      <div>
+        <label class="setting-label">Format</label>
+        <select class="native" id="rewriteFormat">
+          <option value="plain">Plain</option>
+          <option value="email">Email</option>
+          <option value="bullets">Bullets</option>
+        </select>
+      </div>
+      <button class="btn-primary" id="rewriteBtn" disabled>Rewrite</button>
+    </div>
+    <div id="rewriteResults"></div>
+  </div>
+
+  <div class="card advanced" id="advancedPanel">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Pipeline &amp; console</div>
+        <div class="card-title-sub">Live view of the local processing chain</div>
+      </div>
+    </div>
+    <div class="chain" id="chain">
+      <div class="node" data-stage="mic"><div class="ring"></div><label>Mic</label></div>
+      <div class="connector" data-stage="mic"></div>
+      <div class="node" data-stage="vad"><div class="ring"></div><label>VAD</label></div>
+      <div class="connector" data-stage="vad"></div>
+      <div class="node" data-stage="asr"><div class="ring"></div><label>ASR</label></div>
+      <div class="connector" data-stage="asr"></div>
+      <div class="node" data-stage="clean"><div class="ring"></div><label>Clean</label></div>
+      <div class="connector" data-stage="clean"></div>
+      <div class="node" data-stage="style"><div class="ring"></div><label>Style</label></div>
+      <div class="connector" data-stage="style"></div>
+      <div class="node" data-stage="type"><div class="ring"></div><label>Type</label></div>
+    </div>
+    <div class="meter" id="meter">
+      <span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="console" id="console"></div>
+  </div>
+
+  </div>
+  <!-- /page-dictate -->
+
+  <div class="page" id="page-pricing">
+
+  <div class="hero-heading">
+    <h1>Plans that fit how you work</h1>
+    <p>From free personal use to enterprise-grade AI dictation with total data control.</p>
+  </div>
+
+  <div class="pricing-grid">
+
+    <div class="plan-card">
+      <div class="plan-badge free">Free</div>
+      <div class="plan-name">Local Basic</div>
+      <div class="plan-audience">Local speech-to-text on your own device. No account, no cloud, no cost.</div>
+      <div class="plan-price">Free</div>
+      <div class="plan-price-note">forever, single device</div>
+      <ul class="plan-features">
+        <li>Fully offline local model</li>
+        <li>Live &amp; document dictation modes</li>
+        <li>Basic tone &amp; format styling</li>
+        <li>Custom dictionary &amp; corrections</li>
+        <li>Community support</li>
+      </ul>
+      <button class="plan-cta solid">Get started free</button>
+    </div>
+
+    <div class="plan-card highlight">
+      <div class="plan-ribbon">Confidentiality-first</div>
+      <div class="plan-badge pro">Professional</div>
+      <div class="plan-name">Local + Local LLM</div>
+      <div class="plan-audience">For IT professionals and healthcare workers who need AI rewriting without data ever leaving the device.</div>
+      <div class="plan-price">Contact sales</div>
+      <div class="plan-price-note">per user, one-time or annual</div>
+      <ul class="plan-features">
+        <li>Everything in Local Basic</li>
+        <li>On-device LLM rewrite &amp; summarize</li>
+        <li>Zero data leaves your machine</li>
+        <li>HIPAA / GDPR-friendly workflow</li>
+        <li>Priority model updates &amp; email support</li>
+      </ul>
+      <button class="plan-cta outline">Contact sales</button>
+    </div>
+
+    <div class="plan-card">
+      <div class="plan-badge ent">Enterprise</div>
+      <div class="plan-name">Local + Local LLM Enterprise</div>
+      <div class="plan-audience">Fleet-wide offline deployment with local AI for regulated or high-security organizations.</div>
+      <div class="plan-price">Contact sales</div>
+      <div class="plan-price-note">per employee, one-time or annual</div>
+      <ul class="plan-features">
+        <li>Everything in Professional</li>
+        <li>Centralized policy &amp; rollout tools</li>
+        <li>Admin dashboard for local fleet</li>
+        <li>Custom local LLM tuning</li>
+        <li>Dedicated support &amp; SLA</li>
+      </ul>
+      <button class="plan-cta outline">Contact sales</button>
+    </div>
+
+    <div class="plan-card">
+      <div class="plan-badge team">Team</div>
+      <div class="plan-name">Cloud Sync</div>
+      <div class="plan-audience">Enterprise teams that want dictation and settings synced across every employee device.</div>
+      <div class="plan-price">Contact sales</div>
+      <div class="plan-price-note">per employee, one-time or annual</div>
+      <ul class="plan-features">
+        <li>Cloud sync across devices</li>
+        <li>Shared team dictionary &amp; presets</li>
+        <li>Centralized, per-employee billing</li>
+        <li>Choose one-time or annual payment</li>
+        <li>Admin console &amp; usage analytics</li>
+      </ul>
+      <button class="plan-cta outline">Contact sales</button>
+    </div>
+
+    <div class="plan-card">
+      <div class="plan-badge teamai">Team + AI</div>
+      <div class="plan-name">Cloud Sync + LLM</div>
+      <div class="plan-audience">Everything enterprise teams need, plus cloud-accelerated AI rewriting for every employee.</div>
+      <div class="plan-price">Contact sales</div>
+      <div class="plan-price-note">per employee, one-time or annual</div>
+      <ul class="plan-features">
+        <li>Everything in Cloud Sync</li>
+        <li>Cloud LLM rewrite &amp; summarization</li>
+        <li>Advanced AI formatting (email, docs, notes)</li>
+        <li>Per-employee AI usage controls</li>
+        <li>Priority enterprise support &amp; SLA</li>
+      </ul>
+      <button class="plan-cta outline">Contact sales</button>
+    </div>
+
+  </div>
+
+  <div class="pricing-note">All local plans process audio entirely on-device — nothing is ever uploaded.</div>
+
+  </div>
+  <!-- /page-pricing -->
+
+</div>
+
+<script>
+const statusPill = document.getElementById('statusPill');
+const statusText = document.getElementById('statusText');
+const recRing = document.getElementById('recRing');
+const recLabel = document.getElementById('recLabel');
+const recSub = document.getElementById('recSub');
+const micSelect = document.getElementById('micSelect');
+const modeSeg = document.getElementById('modeSeg');
+const toneSeg = document.getElementById('toneSeg');
+const formatSeg = document.getElementById('formatSeg');
+const sumMode = document.getElementById('sumMode');
+const sumTone = document.getElementById('sumTone');
+const sumFormat = document.getElementById('sumFormat');
+const outputBody = document.getElementById('outputBody');
+const outputMeta = document.getElementById('outputMeta');
+const copyBtn = document.getElementById('copyBtn');
+const historyEl = document.getElementById('history');
+const consoleEl = document.getElementById('console');
+const meterEl = document.getElementById('meter');
+const chainEl = document.getElementById('chain');
+const advToggle = document.getElementById('advToggle');
+const advSwitch = document.getElementById('advSwitch');
+const advancedPanel = document.getElementById('advancedPanel');
+
+// ---------- Sidebar page navigation ----------
+const navItems = document.querySelectorAll('.side-nav-item[data-page]');
+navItems.forEach(item => {
+  item.addEventListener('click', () => {
+    const target = item.getAttribute('data-page');
+    const page = document.getElementById('page-' + target);
+    if (!page) return; // History / Settings have no page yet
+    navItems.forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    page.classList.add('active');
+  });
+});
+
+let ready = false;
+let recording = false;
+let lastText = '';
+const vocabInput=document.getElementById('vocabInput'), heardInput=document.getElementById('heardInput'), replaceInput=document.getElementById('replaceInput'), addVocabBtn=document.getElementById('addVocabBtn'), addCorrectionBtn=document.getElementById('addCorrectionBtn'), vocabList=document.getElementById('vocabList'), correctionList=document.getElementById('correctionList');
+function renderDictionary(data){const v=data.vocabulary||[], c=data.corrections||{};vocabList.innerHTML='';if(!v.length)vocabList.innerHTML='<div class="dict-empty">No custom words yet.</div>';v.forEach(word=>{const tag=document.createElement('div');tag.className='dict-tag';tag.textContent=word+' ';const x=document.createElement('button');x.className='dict-remove';x.type='button';x.textContent='×';x.onclick=async()=>{const r=await fetch('/api/dictionary/vocabulary',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({word})});renderDictionary(await r.json())};tag.appendChild(x);vocabList.appendChild(tag)});correctionList.innerHTML='';const e=Object.entries(c);if(!e.length)correctionList.innerHTML='<div class="dict-empty">No correction rules yet.</div>';e.forEach(([heard_as,replace_with])=>{const row=document.createElement('div');row.className='correction-item';row.innerHTML='<span></span><span class="correction-arrow">→</span><span></span>';row.children[0].textContent=heard_as;row.children[2].textContent=replace_with;const x=document.createElement('button');x.className='dict-remove';x.type='button';x.textContent='×';x.onclick=async()=>{const r=await fetch('/api/dictionary/correction',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({word:heard_as})});renderDictionary(await r.json())};row.appendChild(x);correctionList.appendChild(row)})}
+async function loadDictionary(){try{const r=await fetch('/api/dictionary');if(r.ok)renderDictionary(await r.json())}catch(e){}}
+addVocabBtn.onclick=async()=>{const word=vocabInput.value.trim();if(!word)return;const r=await fetch('/api/dictionary/vocabulary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({word})});if(r.ok){vocabInput.value='';renderDictionary(await r.json())}};
+addCorrectionBtn.onclick=async()=>{const heard_as=heardInput.value.trim(),replace_with=replaceInput.value.trim();if(!heard_as||!replace_with)return;const r=await fetch('/api/dictionary/correction',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({heard_as,replace_with})});if(r.ok){heardInput.value='';replaceInput.value='';renderDictionary(await r.json())}};
+vocabInput.onkeydown=e=>{if(e.key==='Enter')addVocabBtn.click()};replaceInput.onkeydown=e=>{if(e.key==='Enter')addCorrectionBtn.click()};
+
+const dictationHistory = [];
+let activeHistoryId = null;
+const MAX_HISTORY = 5;
+
+/* ---------- Advanced toggle ---------- */
+advToggle.addEventListener('click', () => {
+  const show = !advancedPanel.classList.contains('show');
+  advancedPanel.classList.toggle('show', show);
+  advSwitch.classList.toggle('on', show);
+});
+
+/* ---------- Segmented control helper ---------- */
+function wireSegmented(el, endpoint, onSelect){
+  el.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if(btn.disabled) return;
+      el.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      fetch(`${endpoint}/${btn.dataset.val}`, {method:'POST'});
+      if(onSelect) onSelect(btn.dataset.val, btn.textContent);
+    });
+  });
+}
+wireSegmented(modeSeg, '/api/mode', (val, label) => {
+  sumMode.textContent = label;
+  const isDoc = val === 'document';
+  formatSeg.querySelectorAll('button').forEach(b => b.disabled = !ready || false);
+});
+wireSegmented(toneSeg, '/api/tone', (val, label) => sumTone.textContent = label);
+wireSegmented(formatSeg, '/api/format', (val, label) => sumFormat.textContent = label);
+
+function setSegDisabled(el, disabled){
+  el.querySelectorAll('button').forEach(b => b.disabled = disabled);
+}
+
+function setStatus(state, label){
+  statusPill.className = 'status-chip ' + state;
+  statusText.textContent = label;
+}
+
+function lightStage(stage){
+  const node = chainEl.querySelector(`.node[data-stage="${stage}"]`);
+  const conn = chainEl.querySelector(`.connector[data-stage="${stage}"]`);
+  if(node){ node.classList.add('active'); setTimeout(()=>node.classList.remove('active'), 1600); }
+  if(conn){ conn.classList.add('active'); setTimeout(()=>conn.classList.remove('active'), 1600); }
+}
+
+function appendConsole(line){
+  const div = document.createElement('div');
+  let cls = '';
+  if(/\[ASR\]|\[Audio\]|\[VAD\]/.test(line)) cls = 'tag-asr';
+  if(/\[Style\]|\[Clean\]/.test(line)) cls = 'tag-style';
+  if(/error|Error|ERROR|Traceback/.test(line)) cls = 'tag-err';
+  div.className = cls;
+  div.textContent = line.replace(/\x1b\[[0-9;]*m/g, '');
+  consoleEl.appendChild(div);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+  while(consoleEl.children.length > 400) consoleEl.removeChild(consoleEl.firstChild);
+
+  if(/\[Audio\]|Recording\.\.\./.test(line)) lightStage('mic');
+  if(/\[VAD\]/.test(line)) lightStage('vad');
+  if(/\[ASR\]/.test(line)) lightStage('asr');
+  if(/clean|Clean/.test(line)) lightStage('clean');
+  if(/\[Style\]|STYLING/.test(line)) lightStage('style');
+}
+
+function renderOutputWithCorrections(text, changes){
+  outputBody.innerHTML = '';
+  const remaining = (changes || []).flatMap(change =>
+    Array.from({length: Number(change.count || 1)}, () => ({...change}))
+  );
+  if(!remaining.length){
+    outputBody.textContent = text;
+    return;
+  }
+
+  const pattern = new RegExp(remaining.map(c => c.replace_with.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(Boolean).sort((a,b)=>b.length-a.length).join('|'), 'gi');
+  let lastIndex = 0;
+  let match;
+  while((match = pattern.exec(text)) !== null){
+    const matched = match[0];
+    const idx = remaining.findIndex(c => c.replace_with.toLowerCase() === matched.toLowerCase());
+    if(idx === -1) continue;
+    const change = remaining[idx];
+    outputBody.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+    const span = document.createElement('span');
+    span.className = 'corrected-word';
+    span.textContent = matched;
+    span.title = `Changed from: ${change.heard_as}`;
+    outputBody.appendChild(span);
+    remaining.splice(idx, 1);
+    lastIndex = match.index + matched.length;
+  }
+  outputBody.appendChild(document.createTextNode(text.slice(lastIndex)));
+}
+
+function displayHistoryItem(item){
+  lastText = item.text;
+  activeHistoryId = item.id;
+  renderOutputWithCorrections(item.text, item.corrections_applied);
+  outputMeta.classList.add('show');
+  outputMeta.innerHTML = `
+    <div class="meta-chip">ASR <b>${Math.round(item.asr_latency_ms||0)}ms</b></div>
+    <div class="meta-chip">Clean <b>${Math.round(item.clean_latency_ms||0)}ms</b></div>
+    <div class="meta-chip">Style <b>${Math.round(item.style_latency_ms||0)}ms</b></div>
+    <div class="meta-chip">Tone <b>${(item.tone||'').toUpperCase()}</b></div>
+  `;
+  copyBtn.style.display = 'inline-flex';
+  renderHistory();
+}
+
+function renderHistory(){
+  historyEl.innerHTML = '';
+  dictationHistory.forEach(item => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'history-chip' + (item.id === activeHistoryId ? ' active' : '');
+    const snippet = item.text.length > 60 ? item.text.slice(0,60) + '…' : item.text;
+    chip.innerHTML = `<span class="time">${item.time}</span>${snippet}`;
+    chip.title = 'Open this dictation';
+    chip.addEventListener('click', () => displayHistoryItem(item));
+    historyEl.appendChild(chip);
+  });
+}
+
+function renderResult(result){
+  const text = result.final_text || '';
+  const item = {
+    id: Date.now() + Math.random(),
+    text,
+    asr_latency_ms: result.asr_latency_ms,
+    clean_latency_ms: result.clean_latency_ms,
+    style_latency_ms: result.style_latency_ms,
+    tone: result.tone,
+    corrections_applied: result.corrections_applied || [],
+    time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+  };
+
+  dictationHistory.unshift(item);
+  if(dictationHistory.length > MAX_HISTORY) dictationHistory.pop();
+
+  displayHistoryItem(item);
+  lightStage('type');
+}
+
+copyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(lastText).then(() => {
+    copyBtn.textContent = 'Copied';
+    setTimeout(()=>copyBtn.textContent='Copy text', 1200);
+  });
+});
+
+recRing.addEventListener('click', async () => {
+  if(!ready) return;
+  if(!recording) await fetch('/api/start', {method:'POST'});
+  else await fetch('/api/stop', {method:'POST'});
+});
+
+function setRecordingUI(isRecording){
+  recording = isRecording;
+  recRing.classList.toggle('recording', isRecording);
+  recLabel.textContent = isRecording ? 'Listening…' : 'Ready to dictate';
+  recSub.textContent = isRecording ? 'Press again, or F10, to stop' : 'Click the mic, or press F9, to begin';
+  meterEl.classList.toggle('live', isRecording);
+  setStatus(isRecording ? 'recording' : 'ready', isRecording ? 'Recording' : 'Ready');
+  micSelect.disabled = isRecording;
+  setSegDisabled(modeSeg, isRecording);
+  setSegDisabled(toneSeg, isRecording);
+}
+
+async function loadMicrophones(){
+  try{
+    const res = await fetch('/api/microphones');
+    const data = await res.json();
+    micSelect.innerHTML = '';
+    data.devices.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.index; opt.textContent = d.name;
+      if(d.index === data.current) opt.selected = true;
+      micSelect.appendChild(opt);
+    });
+  }catch(e){}
+}
+micSelect.addEventListener('change', () => fetch(`/api/microphone/${micSelect.value}`, {method:'POST'}));
+
+function onEngineReady(){
+  ready = true;
+  setStatus('ready', 'Ready');
+  recRing.classList.remove('disabled');
+  recLabel.textContent = 'Ready to dictate';
+  recSub.textContent = 'Click the mic, or press F9, to begin';
+  micSelect.disabled = false;
+  setSegDisabled(modeSeg, false);
+  setSegDisabled(toneSeg, false);
+  setSegDisabled(formatSeg, false);
+  rewriteBtn.disabled = false;
+  loadMicrophones();
+  loadDictionary();
+}
+
+/* ---------- Rewrite panel ---------- */
+const rewriteInput = document.getElementById('rewriteInput');
+const rewriteTone = document.getElementById('rewriteTone');
+const rewriteFormat = document.getElementById('rewriteFormat');
+const rewriteBtn = document.getElementById('rewriteBtn');
+const rewriteResults = document.getElementById('rewriteResults');
+
+function makeResultBlock(label, text){
+  const block = document.createElement('div');
+  block.className = 'rewrite-result';
+  block.innerHTML = `<div class="rr-label"><span>${label}</span><button class="rr-copy">Copy</button></div><div class="rr-text"></div>`;
+  block.querySelector('.rr-text').textContent = text;
+  block.querySelector('.rr-copy').addEventListener('click', () => {
+    navigator.clipboard.writeText(text);
+    const b = block.querySelector('.rr-copy'); b.textContent = 'Copied';
+    setTimeout(()=>b.textContent='Copy', 1100);
+  });
+  return block;
+}
+
+rewriteBtn.addEventListener('click', async () => {
+  const text = rewriteInput.value.trim();
+  if(!text) return;
+  rewriteBtn.disabled = true; rewriteBtn.textContent = 'Rewriting…';
+  rewriteResults.innerHTML = '';
+  try{
+    const res = await fetch('/api/rewrite', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text, tone: rewriteTone.value, format_type: rewriteFormat.value})
+    });
+    const data = await res.json();
+    rewriteResults.innerHTML = '';
+    if(data.formal !== undefined){
+      const dual = document.createElement('div'); dual.className = 'rewrite-dual';
+      dual.appendChild(makeResultBlock('Formal', data.formal));
+      dual.appendChild(makeResultBlock('Casual', data.casual));
+      rewriteResults.appendChild(dual);
+    } else {
+      rewriteResults.appendChild(makeResultBlock(rewriteTone.value.toUpperCase(), data.result));
+    }
+  }catch(e){
+    rewriteResults.innerHTML = '<div class="output-empty">Rewrite failed — check Advanced → console for details.</div>';
+  }finally{
+    rewriteBtn.disabled = false; rewriteBtn.textContent = 'Rewrite';
+  }
+});
+
+/* ---------- WebSocket ---------- */
+function connectWS(){
+  const ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    if(msg.type === 'console') appendConsole(msg.data);
+    else if(msg.type === 'ready') onEngineReady();
+    else if(msg.type === 'status'){
+      if(msg.data === 'recording') setRecordingUI(true);
+      else if(msg.data === 'idle' && ready) setRecordingUI(false);
+    } else if(msg.type === 'result') renderResult(msg.data);
+    else if(msg.type === 'error'){ setStatus('error', 'Error'); appendConsole('[FATAL] ' + msg.data); }
+  };
+  ws.onclose = () => { setStatus('error', 'Disconnected'); setTimeout(connectWS, 1500); };
+}
+
+setStatus('', 'Loading models…');
+connectWS();
+</script>
+</body>
+</html>
